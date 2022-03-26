@@ -1,14 +1,14 @@
 # matlab2glb
  Simplistic converter for triangular meshes and tractography data from MATLAB to glb (glTF binary) format. 
  
- Supply individual objects (mesh objects or tracts). Each object to have following fields:
+ Supply individual objects (mesh objects or tracts). Each object to have the following fields:
 
-- indices: face array (MATLAB convention, indices from 1 onwards)
+- indices: face array (MATLAB convention, indices from 1 onwards) - unless a streamlines tract
 - POSITION: vertex coordinates
 - any other attributes [as specified](https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html#meshes-overview)
 
-Rows mean individual entries (e.g., POSITION as Nx3 array where columns are X,Y,Z).
-Spatial data will automatically be converted to glTF coordinate system.
+Rows refer to individual elements (e.g., POSITION is an Nx3 array where columns are X,Y,Z and rows are vertices).
+Spatial data will get automatically converted to glTF coordinate system.
 
 ```
 brain.indices = F;
@@ -47,7 +47,7 @@ ans =
     8    {'BlueMetal'     }       0       0      1       1           1                0.2          {'OPAQUE'}
 ```
 
-Select option by providing its index or name:
+Select material by providing its index or name:
 
 ```
 brain.el.materials = gltf_materials(1);
@@ -58,7 +58,7 @@ brain.el.materials = gltf_materials('GlassPinkBrain');
 Add additional objects either separated by coma or within a cell array:
 
 ```
-tract.POSITION = tck.data;
+tract.POSITION = tck.data; % streamlines objects will store individual data types in cell arrays where each cell refers a streamline
 tract.COLOR_0 = convert_colourmap(tsf.data, 'cool', [0 1]);
 write_glb('brain_and_tract.glb', brain, tract);
 % OR
