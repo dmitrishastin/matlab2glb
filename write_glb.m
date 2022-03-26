@@ -50,10 +50,16 @@ function write_glb(fname, varargin)
                 fn{j} = 'POSITION';
                 objects{i}.POSITION = objects{i}.V;
                 objects{i} = rmfield(objects{i}, 'V');
+                if isfield(objects{i}, 'el') && isfield(objects{i}.el, 'V')
+                    objects{i}.el.POSITION = objects{i}.el.V;
+                end
             elseif strcmp(fn{j}, 'F')
                 fn{j} = 'indices';
                 objects{i}.indices = objects{i}.F;
                 objects{i} = rmfield(objects{i}, 'F');
+                if isfield(objects{i}, 'el') && isfield(objects{i}.el, 'F')
+                    objects{i}.el.indices = objects{i}.el.F;
+                end
             end
             
             if any(strcmp({'POSITION', 'NORMAL', 'TANGENT'}, fn{j}))
