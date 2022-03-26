@@ -3,7 +3,7 @@
  
  Supply individual objects (mesh objects or tracts). Each object to have the following fields:
 
-- indices: face array (MATLAB convention, indices from 1 onwards)
+- indices: face array (MATLAB convention, indices from 1 onwards) - unless a streamlines tract
 - POSITION: vertex coordinates
 - any other attributes [as specified](https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html#meshes-overview)
 
