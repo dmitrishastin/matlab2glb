@@ -92,7 +92,7 @@ Check out the [tract2mesh](https://github.com/dmitrishastin/tract2mesh) converte
 
 ### Example
 
-Draw a semi-transparent shiny cube with two opposing corners painted red and green:
+Draw a semi-transparent glossy cube with two opposing corners painted red and green:
 
 ```
 >> example.POSITION = [0 0 0; 1 0 0; 1 1 0; 0 1 0; 0 0 1; 1 0 1; 1 1 1; 0 1 1]; 
