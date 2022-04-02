@@ -24,8 +24,8 @@ A separate properties field ('prop') is supplied with each object if desired to 
 [Primitive mode](https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html#meshes-overview) refers to topology type to render (e.g., points, lines, triangles), with triangular mesh being the default. Indices referring to individual modes can be found [here](https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html#schema-reference-mesh-primitive), mode names can alternatively be provided.
 
 ```
->> brain.prop.mode = 'Triangles'; 	% triangular mesh
->> tract.prop.mode = 3; 			% line strips
+>> brain.prop.mode = 'Triangles';  % triangular mesh
+>> tract.prop.mode = 3;            % line strips
 ```
 
 Objects that have multiple similar elements (e.g., point clouds, multiple line strips) should be passed as cell arrays, such that each cell refers to an individual element (e.g., point, line strip, respectively):
@@ -88,4 +88,4 @@ Add additional objects either separated by coma or within a cell array:
 >> write_glb('brain_and_tract.glb', obj);
 ```
 
-Check out the [tract2mesh](https://github.com/dmitrishastin/tract2mesh) converter for smooth tubular line strips!
+Check out the [tract2mesh](https://github.com/dmitrishastin/tract2mesh) converter to transform line strips into smooth tubular meshes!
