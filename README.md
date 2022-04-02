@@ -2,6 +2,8 @@
  
  ![Screenshot of meshed structures in glTF-viewer](background.png)
  
+ [![View matlab2glb on File Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.svg)](https://uk.mathworks.com/matlabcentral/fileexchange/109264-matlab2glb)
+ 
  Write data from MATLAB to [glb (glTF binary) format](https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html). Focus on objects - scenes/camera not handled.
  
  Objects are MATLAB structures with the following fields:
