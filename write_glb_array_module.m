@@ -45,14 +45,17 @@ function [o, bin_chunk] = write_glb_array_module(obj, prop, i, o, bin_chunk)
     o.bufferViews{bsh+1}.byteLength = length(f_data);
     o.bufferViews{bsh+1}.byteStride = sum_off;    
 
-    % deal with individual elements - one primitive per each     
+    % define mode
+    if isfield(prop, 'mode')
+        use_mode = convert_mode(prop.mode); 
+    else
+        use_mode = 3;
+    end
+    
+    % deal with individual elements - one primitive per each   
     for sl = 1:numel(sl_len)
 
-        if isfield(prop, 'mode')
-            o.meshes{i}.primitives{sl}.mode = prop.mode; 
-        else
-            o.meshes{i}.primitives{sl}.mode = 3;            
-        end
+        o.meshes{i}.primitives{sl}.mode = use_mode; 
 
         for j = 1:numel(fn)
 

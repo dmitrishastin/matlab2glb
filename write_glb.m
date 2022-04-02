@@ -83,20 +83,19 @@ function write_glb(fname, varargin)
             continue
         end
         
+        % apply mode - standard mesh is default
+        if isfield(prop, 'mode')
+            o.meshes{i}.primitives{1}.mode = convert_mode(prop.mode);
+        else
+            o.meshes{i}.primitives{1}.mode = 4;
+        end
+        
         % apply material
         if isfield(prop, 'material')
             o.meshes{i}.primitives{1}.material = n_mats;
             n_mats = n_mats + 1;
             o.materials{n_mats} = prop.material;
-        end  
-        
-        % apply mode - standard mesh is default
-        if isfield(prop, 'mode')
-            o.meshes{i}.primitives{1}.mode = prop.mode;
-        else
-            o.meshes{i}.primitives{1}.mode = 4;
-        end               
-        
+        end
         
         % PARSE INDICES 
         if any(strcmp(fn, 'indices'))            

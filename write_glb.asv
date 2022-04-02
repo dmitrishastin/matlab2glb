@@ -88,15 +88,7 @@ function write_glb(fname, varargin)
             o.meshes{i}.primitives{1}.material = n_mats;
             n_mats = n_mats + 1;
             o.materials{n_mats} = prop.material;
-        end  
-        
-        % apply mode - standard mesh is default
-        if isfield(prop, 'mode')
-            o.meshes{i}.primitives{1}.mode = prop.mode;
-        else
-            o.meshes{i}.primitives{1}.mode = 4;
-        end               
-        
+        end      
         
         % PARSE INDICES 
         if any(strcmp(fn, 'indices'))            
@@ -152,8 +144,8 @@ function write_glb(fname, varargin)
             end
         end
         
-        % append data        
-        [bin_chunk, lens] = add_data(primitive_data, prop.indices, bin_chunk);
+        % append data - just use properties of the first attribute, doesn't matter
+        [bin_chunk, lens] = add_data(primitive_data, prop.(fn{ao(1)}), bin_chunk);
         lens(3) = size(primitive_data, 1); % number of vertices total
         
         % append bufferView json 
@@ -166,12 +158,12 @@ function write_glb(fname, varargin)
         for j = 1:numel(ao) % calculate offsets and combine the data first
             cash = ash(o); % current a
             mm = [];
-            mm(1, :) = max(single(objects{i}.(fn{ao(j)})));
-            mm(2, :) = min(single(objects{i}.(fn{ao(j)})));
-            lens(4) = offsets(j);
+            mm(1, :) = max(single(objects{i}.(fn{ao(j)})), [], 1);
+            mm(2, :) = min(single(objects{i}.(fn{ao(j)})), [], 1);
+            lens(4) = offsets(j); % byteOffset for accessors
             o = add_json_ac(o, cash, cbsh, prop.(fn{ao(j)}), lens, mm);
             o.meshes{i}.primitives{1}.attributes.(fn{ao(j)}) = cash;
-            o.bufferViews{cbsh}.target = 34962;
+            o.bufferViews{cbsh+1}.target = 34962;
         end        
     end
     
@@ -241,11 +233,11 @@ function int_type = decide_integer_type(max_val)
 
     % add signed integers later
     
-    if max_val < 2 ^ 8
+    if max_val < 2 ^ 8 - 1
         int_type = 5121;
-    elseif max_val < 2 ^ 16
+    elseif max_val < 2 ^ 16 - 1
         int_type = 5123;
-    elseif max_val < 2 ^ 32
+    elseif max_val < 2 ^ 32 - 1
         int_type = 5125;
     else
         warning('Possible stack overflow')
@@ -329,4 +321,35 @@ function n = bsh(o)
     else 
         n = 0;
     end
+end
+
+function mode = convert_mode(mode)
+
+    if isnumeric(mode)
+        return
+    elseif ischar(mode)
+        switch mode
+            case 'Points'
+                mode = 0;
+            case 'Line Strips'
+                mode = 3;
+            case 'Line Loops'
+                mode = 2;
+            case 'Lines'
+                mode = 1;
+            case 'Triangles'
+                mode = 4;
+            case 'Triangle Strips'
+                mode = 5;
+            case 'Triangle Fans'
+                mode = 6;
+            otherwise
+                warning('Mode provided incorrectly, handling as triangles')
+                mode = 4;
+        end
+    else
+        warning('Mode provided incorrectly, handling as triangles')
+        mode = 4;
+    end
+
 end
