@@ -247,7 +247,8 @@ function int_type = decide_integer_type(max_val)
     elseif max_val < 2 ^ 32 - 1
         int_type = 5125;
     else
-        warning('Possible stack overflow')
+        int_type = 5126;
+        warning('Converting integers to float')
     end
 
 end
