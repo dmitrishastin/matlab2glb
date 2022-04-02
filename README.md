@@ -92,7 +92,7 @@ Add additional objects either separated by coma or within a cell array:
 
 Check out the [tract2mesh](https://github.com/dmitrishastin/tract2mesh) converter to transform line strips into smooth tubular meshes!
 
-### Example
+## Example
 
 Draw a semi-transparent glossy cube with two opposing corners painted red and green:
 
@@ -109,3 +109,6 @@ Draw a semi-transparent glossy cube with two opposing corners painted red and gr
 ```
 
 The example can be downloaded [here](example.glb) and viewed [here](https://gltf-viewer.donmccurdy.com/).
+
+## Thanks
+[@chamberm](https://github.com/chamberm) for testing and feedback!
