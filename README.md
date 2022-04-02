@@ -89,3 +89,21 @@ Add additional objects either separated by coma or within a cell array:
 ```
 
 Check out the [tract2mesh](https://github.com/dmitrishastin/tract2mesh) converter to transform line strips into smooth tubular meshes!
+
+### Example
+
+Draw a semi-transparent shiny cube with two opposing corners painted red and green:
+
+```
+>> example.POSITION = [0 0 0; 1 0 0; 1 1 0; 0 1 0; 0 0 1; 1 0 1; 1 1 1; 0 1 1]; 
+>> example.indices = [1 4 2; 4 3 2; 3 7 2; 7 6 2; 3 4 7; 4 8 7; 8 5 7; 5 6 7; 5 2 6; 5 1 2; 1 5 4; 5 8 4];
+>> example.COLOR_0 = [1 0 0; 0.5 0.5 0.5; 0.5 0.5 0.5; 0.5 0.5 0.5; 0.5 0.5 0.5; 0.5 0.5 0.5; 0 1 0; 0.5 0.5 0.5];
+>> example.prop.material.pbrMetallicRoughness.baseColorFactor = [0.7 0.7 1 0.5];
+>> example.prop.material.pbrMetallicRoughness.metallicFactor = 1;
+>> example.prop.material.pbrMetallicRoughness.roughnessFactor = 0.1;
+>> example.prop.material.alphaMode = 'BLEND';
+>> example.prop.material.doubleSided = true;
+>> write_glb('example.glb', example);
+```
+
+The example can be downloaded [here](example.glb) and viewed [here](https://gltf-viewer.donmccurdy.com/).
