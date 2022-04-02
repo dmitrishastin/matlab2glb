@@ -6,4 +6,5 @@ Chrome,1,1,1,1,1,0,OPAQUE
 Gold,1,0.75,0,1,1,0.2,OPAQUE
 Ruby,0.6,0,0,0.75,0.5,0,BLEND
 GreenMetal,0,1,0,1,1,0.2,OPAQUE
-BlueMetal,0,0,1,1,1,0.2,OPAQUE
+SkyBlueMetal,0,1,1,1,1,0,OPAQUE
+DECmetallic,0.7,0.7,1,1,1,0.3,OPAQUE

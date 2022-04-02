@@ -29,11 +29,8 @@ function write_glb(fname, varargin)
     % start the buffer chunk 
     bin_chunk = []; 
     
-    % padding spaces
-    spl = @(buff, bytes) zeros(1, ceil(length(buff) / bytes) * bytes - length(buff)); 
-    
-    % number of materials
-    n_mats = 0; 
+    % counter
+    n_mats = 0; % materials
     
     % parse every object
     for i = 1:nobj
@@ -46,156 +43,140 @@ function write_glb(fname, varargin)
         % naming and coordinate system
         for j = 1:numel(fn)
             
+            % change V to POSITION, F to indices            
             if strcmp(fn{j}, 'V')
                 fn{j} = 'POSITION';
                 objects{i}.POSITION = objects{i}.V;
                 objects{i} = rmfield(objects{i}, 'V');
-                if isfield(objects{i}, 'el') && isfield(objects{i}.el, 'V')
-                    objects{i}.el.POSITION = objects{i}.el.V;
+                if isfield(objects{i}, 'prop') && isfield(objects{i}.prop, 'V')
+                    objects{i}.prop.POSITION = objects{i}.prop.V;
                 end
             elseif strcmp(fn{j}, 'F')
                 fn{j} = 'indices';
                 objects{i}.indices = objects{i}.F;
                 objects{i} = rmfield(objects{i}, 'F');
-                if isfield(objects{i}, 'el') && isfield(objects{i}.el, 'F')
-                    objects{i}.el.indices = objects{i}.el.F;
+                if isfield(objects{i}, 'prop') && isfield(objects{i}.prop, 'F')
+                    objects{i}.prop.indices = objects{i}.prop.F;
                 end
             end
             
-            if any(strcmp({'POSITION', 'NORMAL', 'TANGENT'}, fn{j}))
+            % re-orient coordinate data
+            if any(strcmp({'POSITION', 'NORMAL', 'TANGENT'}, fn{j})) 
                 objects{i}.(fn{j}) = gltf_orientation(objects{i}.(fn{j}));
             end
         end
         
-        % assume this is a streamlines object
+        % sort out the properties field
+        if any(strcmp(fn, 'prop'))
+            prop = objects{i}.prop;
+            objects{i} = rmfield(objects{i}, 'prop');
+            fn(cellfun(@(x)strcmp(x, 'prop'), fn)) = [];
+        else
+            prop = [];            
+        end
+        
+        % where position is a cell, writes each cell as a separate
+        % primitive with all primitives being very similar (points, lines
+        % etc), does not handle indices/faces
         if isfield(objects{i}, 'POSITION') && iscell(objects{i}.POSITION)
-            [o, bin_chunk] = write_glb_tracks_module(objects{i}, i, o, bin_chunk);
+            [o, bin_chunk] = write_glb_array_module(objects{i}, prop, i, o, bin_chunk);
             continue
         end
         
-        % sort out the elements field
-        if any(strcmp(fn, 'el'))
-            el = objects{i}.el;
-            objects{i} = rmfield(objects{i}, 'el');
-            fn(cellfun(@(x)strcmp(x, 'el'), fn)) = [];
-        else
-            el = [];            
-        end
-        
-        % ensure F and V come first
-        v = strcmp(fn, 'POSITION'); f = strcmp(fn, 'indices');
-        assert(any(v) && any(f), 'V/POSITION or F/indices fields missing')
-        fn = {'indices' 'POSITION' fn{~v & ~f}};         
-        
-        % substitute 1 from indices
-        objects{i}.indices = objects{i}.indices - 1;        
-        
-        % describe triangles 
-        if isfield(el, 'material')
+        % apply material
+        if isfield(prop, 'material')
             o.meshes{i}.primitives{1}.material = n_mats;
             n_mats = n_mats + 1;
-            o.materials{n_mats} = el.material;
-        end     
+            o.materials{n_mats} = prop.material;
+        end  
         
-        % enumerate accessors
-        if isfield(o, 'accessors')
-            ash = numel(o.accessors);
+        % apply mode - standard mesh is default
+        if isfield(prop, 'mode')
+            o.meshes{i}.primitives{1}.mode = prop.mode;
         else
-            ash = 0;
-        end
-
-        % enumerate bufferViews
-        if isfield(o, 'bufferViews')
-            bsh = numel(o.bufferViews);
-        else
-            bsh = 0;
-        end
+            o.meshes{i}.primitives{1}.mode = 4;
+        end               
         
-        % deal with individual data
-        for j = 1:numel(fn)
-            
-            u = objects{i}.(fn{j});
-
-            % characterise data if needed (simplistic)
-            if ~isfield(el, fn{j})
-                el.(fn{j}) = [];
+        
+        % PARSE INDICES 
+        if any(strcmp(fn, 'indices'))            
+            indices_data = objects{i}.indices - 1; % substitute 1 from the indices
+            if ~isfield(prop, 'indices')
+                prop.indices = [];
             end
-
-            % decide on whether input is integer and select datatype            
-            isint = floor(u) ~= u;
-            if ~isfield(el.(fn{j}), 'ctype')
-                if any(isint(:))
-                    el.(fn{j}).ctype = 5126;                                 % single
-                else
-                    el.(fn{j}).ctype = decide_integer_type(max(u(:)));       % integer type depending on number of verts     
+            prop.indices.type = 'SCALAR';
+            if ~all(ismember({'type' 'ctype' 'bytes'}, fieldnames(prop.indices)))
+                prop.indices = classify_data(indices_data, prop.indices);
+            end
+            cash = ash(o); cbsh = bsh(o); % current a & b
+            
+            % append data
+            [bin_chunk, lens] = add_data(indices_data, prop.indices, bin_chunk);
+            
+            % append json
+            lens(3) = numel(indices_data); % number of indices total
+            lens(4) = 0; % byteOffset for accessors
+            mm = [];
+            mm(1) = max(uint32(indices_data(:)));
+            mm(2) = min(uint32(indices_data(:)));
+            o = add_json_bv(o, cbsh, lens);
+            o = add_json_ac(o, cash, cbsh, prop.indices, lens, mm);
+            o.meshes{i}.primitives{1}.indices = cash;       
+            o.bufferViews{cbsh + 1}.target = 34963;
+        end
+        
+        
+        % PARSE ATTRIBUTES
+        attribute_names = {'POSITION' 'NORMAL' 'TANGENT' 'COLOR_' 'TEXCOORD_' 'JOINTS_' 'WEIGHTS_'};
+        primitive_data = [];
+        cen = []; % number of components per element
+        elen = []; % length of each element in bytes
+        ao = []; % attribute order
+        
+        for j = 1:numel(fn) % work out properties and combine the data first
+            det_field = ~cellfun(@isempty, regexp(fn{j}, attribute_names, 'once'));            
+            if any(det_field)     
+                ao(end + 1) = j;
+                if ~isfield(prop, fn{j})
+                    prop.(fn{j}) = [];
                 end
+                prop.(fn{j}).ctype = 5126; % all vertex component data is of single type
+                prop.(fn{j}).bytes = 4;
+                % if ~all(ismember({'type' 'ctype' 'bytes'}, fieldnames(prop.(fn{j}))))
+                if ~isfield(prop.(fn{j}), 'type')
+                    prop.(fn{j}) = classify_data(objects{i}.(fn{j}), prop.(fn{j}));
+                end    
+                cen(end + 1) = size(objects{i}.(fn{j}), 2);
+                elen(end + 1) = cen(end) * 4; % prop.(fn{j}).bytes; 
+                primitive_data = [primitive_data objects{i}.(fn{j})];
             end
-
-            % decide how many bytes it needs
-            if ~isfield(el.(fn{j}), 'bytes')
-                el.(fn{j}).bytes = 2 ^ (floor((mod(el.(fn{j}).ctype, 5120) - 1) / 2)); 
-            end
-                
-            % decide how to classify
-            if ~isfield(el.(fn{j}), 'type')
-                if j == 1 || size(u, 2) == 1
-                    el.(fn{j}).type = 'SCALAR';
-                else
-                    el.(fn{j}).type = ['VEC' num2str(size(u, 2))];
-                end                
-            end
-
-            % populate primitives info
-            cash = ash; % current a
-            if j == 1
-                o.meshes{i}.primitives{1}.indices = cash;       
-                o.bufferViews{j}.target = 34963;  
-            else            
-                o.meshes{i}.primitives{1}.attributes.(fn{j}) = cash;
-                o.bufferViews{j}.target = 34962;
-            end            
-            ash = ash + 1;
-
-            % parse data
-            sp = spl(bin_chunk, el.(fn{j}).bytes);                      % add spacer if needed                 
-            f_data = reshape(u', 1, []);                                % a1 b1 c1 a2 b2 c2 ...    
-            switch el.(fn{j}).ctype                                     % tp byte representation
-                case 5123
-                    f_data = typecast(uint16(f_data), 'uint8');
-                case 5125
-                    f_data = typecast(uint32(f_data), 'uint8');
-                case 5126
-                    f_data = typecast(single(f_data), 'uint8');
-            end
-
-            bin_chunk = [bin_chunk sp f_data];
-
-            % parse json              
-            o.bufferViews{bsh+1}.buffer = 0;                                % just use the same buffer for everything
-            o.bufferViews{bsh+1}.byteOffset = length(bin_chunk) - length(f_data); 
-            o.bufferViews{bsh+1}.byteLength = length(f_data);            
-
-            o.accessors{cash+1}.bufferView = bsh;            
-            o.accessors{cash+1}.byteOffset = 0;                           
-            o.accessors{cash+1}.componentType = el.(fn{j}).ctype;  
-            o.accessors{cash+1}.type = el.(fn{j}).type;
-            
-            bsh = bsh + 1;
-
-            if strcmp(el.(fn{j}).type, 'SCALAR')
-                o.accessors{cash+1}.count = numel(u);                 
-                o.accessors{cash+1}.max = {max(single(u(:)))};  
-                o.accessors{cash+1}.min = {min(single(u(:)))};
-            else
-                o.accessors{cash+1}.count = size(u, 1);
-                o.accessors{cash+1}.max = max(single(u));  
-                o.accessors{cash+1}.min = min(single(u));
-            end                
         end
-    end    
+        
+        % append data - just use properties of the first attribute, doesn't matter
+        [bin_chunk, lens] = add_data(primitive_data, prop.(fn{ao(1)}), bin_chunk);
+        lens(3) = size(primitive_data, 1); % number of vertices total
+        
+        % append bufferView json 
+        cbsh = bsh(o); % current b
+        o.bufferViews{cbsh+1}.byteStride = sum(elen);
+        o = add_json_bv(o, cbsh, lens);
+        offsets = cumsum([0 elen(1:end - 1)]); 
+        
+        % append accessors json
+        for j = 1:numel(ao) % calculate offsets and combine the data first
+            cash = ash(o); % current a
+            mm = [];
+            mm(1, :) = max(single(objects{i}.(fn{ao(j)})), [], 1);
+            mm(2, :) = min(single(objects{i}.(fn{ao(j)})), [], 1);
+            lens(4) = offsets(j); % byteOffset for accessors
+            o = add_json_ac(o, cash, cbsh, prop.(fn{ao(j)}), lens, mm);
+            o.meshes{i}.primitives{1}.attributes.(fn{ao(j)}) = cash;
+            o.bufferViews{cbsh+1}.target = 34962;
+        end        
+    end
     
     assert(length(bin_chunk) < 2^32, 'binary data too large for GLB format');
-    o.buffers{1}.byteLength = length(bin_chunk);                        % buffer - uri is omitted as GLB format
+    o.buffers{1}.byteLength = length(bin_chunk); % buffer - uri is omitted as GLB format
     o.asset.version = '2.0'; 
     
     %% write
@@ -228,16 +209,124 @@ function write_glb(fname, varargin)
 
 end
 
+function prop = classify_data(data, prop)
+
+    % decide on whether input is integer and select datatype            
+    isint = floor(data) == data;
+    if ~isfield(prop, 'ctype')
+        if ~all(isint(:)) || any(data(:) < 0)               % add signed integers later
+            prop.ctype = 5126;                                % single
+        else
+            prop.ctype = decide_integer_type(max(data(:)));   % integer type depending on number of verts     
+        end
+    end
+
+    % decide how many bytes it needs
+    if ~isfield(prop, 'bytes')
+        prop.bytes = 2 ^ (floor((mod(prop.ctype, 5120) - 1) / 2)); 
+    end
+
+    % decide how to classify
+    if ~isfield(prop, 'type')
+        ncol = size(data, 2);
+        if ncol == 1
+            prop.type = 'SCALAR';
+        else
+            prop.type = ['VEC' num2str(ncol)];
+        end                
+    end
+end
+
 function int_type = decide_integer_type(max_val)
 
-    if max_val < 2 ^ 8
+    % add signed integers later
+    
+    if max_val < 2 ^ 8 - 1
         int_type = 5121;
-    elseif max_val < 2 ^ 16
+    elseif max_val < 2 ^ 16 - 1
         int_type = 5123;
-    elseif max_val < 2 ^ 32
+    elseif max_val < 2 ^ 32 - 1
         int_type = 5125;
     else
         warning('Possible stack overflow')
     end
 
+end
+
+function [bin_chunk, lens] = add_data(data, prop, bin_chunk)
+
+    % padding spaces
+    spl = @(buff, bytes) zeros(1, ceil(length(buff) / bytes) * bytes - length(buff));     
+    
+    % parse data
+    sp = spl(bin_chunk, prop.bytes);    % add spacer if needed                 
+    data = reshape(data', 1, []);       % a1,1 a1,2 a1,3 b1,1 b1,2 b1,3 a2,1 a2,2 a2,3 ...
+    switch prop.ctype                   % tp byte representation
+        case 5120
+            data = typecast(int8(data), 'uint8');
+        case 5122
+            data = typecast(int16(data), 'uint8');
+        case 5123
+            data = typecast(uint16(data), 'uint8');
+        case 5125
+            data = typecast(uint32(data), 'uint8');
+        case 5126
+            data = typecast(single(data), 'uint8');
+    end
+
+    % add data
+    bin_chunk = [bin_chunk sp data];
+    
+    % work out lengths for json
+    lens(1) = length(bin_chunk) - length(data);
+    lens(2) = length(data);
+    
+end
+
+function o = add_json_bv(o, cbsh, lens)
+
+    % add json for bufferView
+    o.bufferViews{cbsh+1}.buffer = 0; % just use the same buffer for everything
+    o.bufferViews{cbsh+1}.byteOffset = lens(1); 
+    o.bufferViews{cbsh+1}.byteLength = lens(2);
+
+end
+
+function o = add_json_ac(o, cash, cbsh, prop, lens, mm)
+
+    % add json for accessors
+    o.accessors{cash+1}.bufferView = cbsh;     
+    o.accessors{cash+1}.componentType = prop.ctype;  
+    o.accessors{cash+1}.type = prop.type;
+    o.accessors{cash+1}.count = lens(3);
+    o.accessors{cash+1}.byteOffset = lens(4);
+
+    if strcmp(prop.type, 'SCALAR')
+        o.accessors{cash+1}.max = {mm(1)};  
+        o.accessors{cash+1}.min = {mm(2)};
+    else        
+        o.accessors{cash+1}.max = mm(1, :);  
+        o.accessors{cash+1}.min = mm(2, :);
+    end     
+
+end
+
+function n = ash(o)
+
+    % next available accessors index (starts with 0)
+    if isfield(o, 'accessors')
+        n = numel(o.accessors);
+    else
+        n = 0;
+    end
+end
+
+function n = bsh(o)
+
+    % next available bufferViews index (starts with 0)
+    if isfield(o, 'bufferViews')
+        n = numel(o.bufferViews);
+    else 
+        n = 0;
+    end
 end

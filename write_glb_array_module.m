@@ -1,4 +1,4 @@
-function [o, bin_chunk] = write_glb_tracks_module(obj, i, o, bin_chunk)
+function [o, bin_chunk] = write_glb_array_module(obj, prop, i, o, bin_chunk)
 
     spl = @(buff, bytes) zeros(1, ceil(length(buff) / bytes) * bytes - length(buff));
     sl_len = cellfun(@(x)size(x, 1), obj.POSITION);  
@@ -7,7 +7,7 @@ function [o, bin_chunk] = write_glb_tracks_module(obj, i, o, bin_chunk)
     fn = fieldnames(obj);        
     % POSITION NORMAL TANGENT COLOR_0
 
-    % merge all strealmine vertex data
+    % merge all elements' vertex data
     merged = cell(numel(fn), 1);
     attr_off = zeros(numel(fn), 1);
     for j = 1:numel(fn)
@@ -45,14 +45,18 @@ function [o, bin_chunk] = write_glb_tracks_module(obj, i, o, bin_chunk)
     o.bufferViews{bsh+1}.byteLength = length(f_data);
     o.bufferViews{bsh+1}.byteStride = sum_off;    
 
-    % deal with individual streamlines - one primitive per each     
+    % deal with individual elements - one primitive per each     
     for sl = 1:numel(sl_len)
 
-        o.meshes{i}.primitives{sl}.mode = 3;            
+        if isfield(prop, 'mode')
+            o.meshes{i}.primitives{sl}.mode = prop.mode; 
+        else
+            o.meshes{i}.primitives{sl}.mode = 3;            
+        end
 
         for j = 1:numel(fn)
 
-            % accessors: different per streamline and attribute 
+            % accessors: different per element and attribute 
             a = ash + (sl - 1) * numel(fn) + j;
             o.meshes{i}.primitives{sl}.attributes.(fn{j}) = a - 1; 
             o.accessors{a}.bufferView = bsh;            
@@ -60,8 +64,8 @@ function [o, bin_chunk] = write_glb_tracks_module(obj, i, o, bin_chunk)
             o.accessors{a}.componentType = 5126;  
             o.accessors{a}.type = ['VEC' num2str(size(obj.(fn{j}){sl}, 2))];
             o.accessors{a}.count = sl_len(sl);
-            o.accessors{a}.max = max(single(obj.(fn{j}){sl}));  
-            o.accessors{a}.min = min(single(obj.(fn{j}){sl}));
+            o.accessors{a}.max = max(single(obj.(fn{j}){sl}), [], 1);  
+            o.accessors{a}.min = min(single(obj.(fn{j}){sl}), [], 1);
 
         end                
     end        
