@@ -30,7 +30,7 @@ A separate properties field ('prop') is supplied with each object if desired to 
 >> tract.prop.mode = 3;            % line strips
 ```
 
-Objects that have multiple similar elements (e.g., point clouds, multiple line strips) should be passed as cell arrays, such that each cell refers to an individual element (e.g., point, line strip, respectively):
+With the exception of point clouds, objects that have multiple similar elements (e.g., multiple line strips) should be passed as cell arrays, such that each cell refers to an individual element (e.g., line strip, respectively):
 
 ```
 >> disp(numel(tck.data))
