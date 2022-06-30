@@ -74,9 +74,9 @@ ans =
 Select material by providing its index or name:
 
 ```
->> brain.prop.materials = gltf_materials(1);
+>> brain.prop.material = gltf_material(1);
 % OR
->> brain.prop.materials = gltf_materials('GlassPinkBrain');
+>> brain.prop.material = gltf_material('GlassPinkBrain');
 ```
 
 Add additional objects either separated by coma or within a cell array:
