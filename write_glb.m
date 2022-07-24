@@ -183,7 +183,12 @@ function write_glb(fname, varargin)
     to_uint8 = @(x) typecast(uint32(x), 'uint8');
     pad_chunk = @(chunk, pad) [chunk pad * ones(1, ceil(length(chunk) / 4) * 4 - length(chunk))];
     
-    % json chunk    
+    % encode all numbers in json as uint64 otherwise jsonencode will force
+    % scientific notation for very large numbers which will read to
+    % read problems with other software
+    o = conv2uint64(o);
+    
+    % json chunk
     jsn = uint8(jsonencode(o)); % json byte values
     jsn = pad_chunk(jsn, 32); % pad with trailing spaces
     clen = pad_chunk(to_uint8(length(jsn)), 0); % length of json chunk data in bytes
@@ -329,4 +334,21 @@ function n = bsh(o)
     else 
         n = 0;
     end
+end
+
+function o = conv2uint64(o)
+
+    if isstruct(o)
+        fn = fieldnames(o);
+        for i = 1:numel(fn)
+            o.(fn{i}) = conv2uint64(o.(fn{i}));
+        end
+    elseif iscell(o)
+        for i = 1:numel(o)
+            o{i} = conv2uint64(o{i});
+        end
+    elseif isnumeric(o) && all(fix(o) == o) % make sure only integers get converted
+        o = uint64(o);
+    end
+
 end
