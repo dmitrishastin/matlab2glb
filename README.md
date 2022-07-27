@@ -21,6 +21,8 @@ Spatial data will get automatically converted to glTF coordinate system.
 >> brain.COLOR_0 = C;
 ```
 
+**NB! There may be a need to convert colour data to sRGB for correct visualisation. This is currently being investigated; the user is suggested to use a simple acceptable conversion of `C = C .^ 2.2` in the meantime.**
+
 A separate properties field ('prop') is supplied with each object if desired to specify primitive mode, individual data structures' accessor and component types, and materials. 
 
 [Primitive mode](https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html#meshes-overview) refers to topology type to render (e.g., points, lines, triangles), with triangular mesh being the default. Indices referring to individual modes can be found [here](https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html#schema-reference-mesh-primitive), mode names can alternatively be provided.
@@ -111,4 +113,4 @@ Draw a semi-transparent glossy cube with two opposing corners painted red and gr
 The example can be downloaded [here](example.glb) and viewed [here](https://gltf-viewer.donmccurdy.com/).
 
 ## Thanks
-[@chamberm](https://github.com/chamberm) for testing and feedback!
+[@chamberm](https://github.com/chamberm) and [@LeoSvenningsson](https://github.com/LeoSvenningsson) for testing and feedback!
